@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getBookings,
   getReference,
   updateBookingStatus,
   archiveBooking,
   deleteBooking,
+  getCourtOccupancy,
+  formatHourLabel,
+  formatTimeRange,
+  MAX_COURTS,
 } from '../api/bookings'
 
 function formatDate(isoDate) {
@@ -77,9 +81,33 @@ function StatusBadge({ status }) {
   return <span className={className}>{status}</span>
 }
 
+function getNowLocal() {
+  const d = new Date()
+  return {
+    date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`,
+    hour: d.getHours(),
+  }
+}
+
 function Admin() {
   const { bookings, loading, error, refresh } = useBookings()
   const [tab, setTab] = useState('active')
+  const [boardDate, setBoardDate] = useState(() => getNowLocal().date)
+  const [boardHour, setBoardHour] = useState(() => getNowLocal().hour)
+
+  const resetBoard = () => {
+    const { date, hour } = getNowLocal()
+    setBoardDate(date)
+    setBoardHour(hour)
+  }
+
+  const courtStatus = useMemo(
+    () => getCourtOccupancy(bookings, boardDate, boardHour),
+    [bookings, boardDate, boardHour]
+  )
+  const occupiedCount = courtStatus.filter((c) => !c.available).length
 
   const activeBookings = bookings.filter((b) => b.status !== 'Archived')
   const archivedBookings = bookings
@@ -129,6 +157,76 @@ function Admin() {
       </header>
 
       <div className="container">
+        <section className="courts-board">
+          <div className="courts-board-head">
+            <div>
+              <h2 className="courts-title">Court Status</h2>
+              <p className="courts-subtitle">
+                {occupiedCount} of {MAX_COURTS} courts occupied
+              </p>
+            </div>
+            <div className="courts-controls">
+              <input
+                type="date"
+                value={boardDate}
+                onChange={(e) => setBoardDate(e.target.value)}
+                aria-label="Board date"
+              />
+              <select
+                value={boardHour}
+                onChange={(e) => setBoardHour(Number(e.target.value))}
+                aria-label="Board hour"
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>
+                    {formatHourLabel(h)}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="courts-reset" onClick={resetBoard}>
+                Reset
+              </button>
+            </div>
+          </div>
+          <div className="court-cards">
+            {courtStatus.map(({ court, available, booking }) =>
+              available ? (
+                <div key={court} className="court-card free">
+                  <div className="court-card-top">
+                    <span className="court-dot" />
+                    <span className="court-name">COURT {court}</span>
+                  </div>
+                  <div className="court-available">AVAILABLE</div>
+                </div>
+              ) : (
+                <div
+                  key={court}
+                  className={`court-card occupied${
+                    booking.status === 'Pending' ? ' pending' : ''
+                  }`}
+                >
+                  <div className="court-card-top">
+                    <span className="court-dot" />
+                    <span className="court-name">COURT {court}</span>
+                  </div>
+                  <div className="court-occupant">{booking.name}</div>
+                  <div className="court-ref">{getReference(booking)}</div>
+                  <div className="court-time">
+                    {formatTimeRange(booking.time, booking.duration)}
+                  </div>
+                  <div className="court-meta">
+                    <StatusBadge status={booking.status} />
+                    <span className="court-units">
+                      {Number(booking.courts) || 1} court
+                      {(Number(booking.courts) || 1) > 1 ? 's' : ''} booked
+                    </span>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </section>
+
         <div className="admin-tabs">
           <button
             className={`admin-tab ${tab === 'active' ? 'active' : ''}`}

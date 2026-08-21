@@ -636,3 +636,165 @@ body {
   border: none;
   border-radius: 0;
 }
+
+/* ---------- Court status board ---------- */
+.courts-board {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.courts-board-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.courts-title {
+  font-size: 1.15rem;
+  color: #111827;
+}
+
+.courts-subtitle {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+.courts-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.courts-controls input,
+.courts-controls select {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.9rem;
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.courts-reset {
+  padding: 0.45rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.courts-reset:hover {
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}
+
+.court-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.court-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 118px;
+  padding: 0.9rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.court-card.occupied {
+  background: #ffffff;
+  border-color: #fecaca;
+}
+
+.court-card.pending {
+  border-color: #fde68a;
+}
+
+.court-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.court-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #15803d;
+}
+
+.court-card.occupied .court-dot {
+  background: #dc2626;
+}
+
+.court-card.pending .court-dot {
+  background: #d97706;
+}
+
+.court-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.court-available {
+  margin-top: auto;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.court-occupant {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.court-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.court-time {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.court-meta {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.court-units {
+  font-size: 0.78rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .court-cards {
+    grid-template-columns: 1fr;
+  }
+}

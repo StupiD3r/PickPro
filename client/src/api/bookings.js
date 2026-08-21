@@ -48,6 +48,51 @@ export function isSlotAvailable(bookings, time, duration = 1, courts = 1) {
   return true
 }
 
+export function formatHourLabel(hour) {
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const hours12 = hour % 12 === 0 ? 12 : hour % 12
+  return `${hours12}:00 ${period}`
+}
+
+export function formatTimeRange(time, duration) {
+  const start = Number(time.split(':')[0])
+  const end = (start + (Number(duration) || 1)) % 24
+  return `${formatHourLabel(start)} – ${formatHourLabel(end)}`
+}
+
+export function getCourtOccupancy(bookings, date, hour) {
+  const covering = bookings
+    .filter(
+      (booking) =>
+        booking.date === date &&
+        booking.status !== 'Archived' &&
+        coversHour(booking, hour)
+    )
+    .sort(
+      (a, b) =>
+        String(a.createdAt).localeCompare(String(b.createdAt)) ||
+        String(a.reference || '').localeCompare(String(b.reference || ''))
+    )
+
+  const courts = Array.from({ length: MAX_COURTS }, (_, i) => ({
+    court: i + 1,
+    available: true,
+    booking: null,
+  }))
+
+  let cursor = 0
+  for (const booking of covering) {
+    const units = Number(booking.courts) || 1
+    for (let u = 0; u < units && cursor < MAX_COURTS; u++) {
+      courts[cursor] = { court: cursor + 1, available: false, booking }
+      cursor++
+    }
+    if (cursor >= MAX_COURTS) break
+  }
+
+  return courts
+}
+
 export async function addBooking({ name, contact, date, time, duration = 1, courts = 1 }) {
   return request('', {
     method: 'POST',
