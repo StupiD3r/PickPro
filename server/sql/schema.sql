@@ -8,12 +8,15 @@ create table if not exists public.bookings (
   duration_hours int not null default 1 check (duration_hours between 1 and 8),
   courts int not null default 1 check (courts between 1 and 3),
   status text not null default 'Pending' check (status in ('Pending', 'Confirmed', 'Archived')),
+  deleted_at timestamptz,
   created_at timestamptz not null default now()
 );
 
 create index if not exists bookings_date_idx on public.bookings (booking_date);
 
 alter table public.bookings enable row level security;
+
+alter table public.bookings add column if not exists deleted_at timestamptz;
 
 create or replace function public.create_booking(
   p_name text,
@@ -51,6 +54,7 @@ begin
     from public.bookings b
     where b.booking_date = p_date
       and b.status <> 'Archived'
+      and b.deleted_at is null
       and exists (
         select 1
         from generate_series(0, b.duration_hours - 1) g

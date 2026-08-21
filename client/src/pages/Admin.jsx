@@ -6,6 +6,7 @@ import {
   archiveBooking,
   deleteBooking,
   getCourtOccupancy,
+  getNextBooking,
   formatHourLabel,
   formatTimeRange,
   MAX_COURTS,
@@ -109,12 +110,21 @@ function Admin() {
   )
   const occupiedCount = courtStatus.filter((c) => !c.available).length
 
-  const activeBookings = bookings.filter((b) => b.status !== 'Archived')
-  const archivedBookings = bookings
-    .filter((b) => b.status === 'Archived')
-    .sort((a, b) => b.date.localeCompare(a.date) || a.time.localeCompare(b.time))
+  const nextBooking = useMemo(
+    () => getNextBooking(bookings, boardDate, boardHour),
+    [bookings, boardDate, boardHour]
+  )
 
-  const pendingCount = activeBookings.filter((b) => b.status === 'Pending').length
+  const todayStr = getNowLocal().date
+
+  const isPast = (booking) => booking.date < todayStr
+
+  const activeBookings = bookings.filter(
+    (b) => b.status !== 'Archived' && !b.deletedAt && !isPast(b)
+  )
+  const historyBookings = bookings
+    .filter((b) => b.status === 'Archived' || b.deletedAt || isPast(b))
+    .sort((a, b) => b.date.localeCompare(a.date) || a.time.localeCompare(b.time))
 
   const toggleConfirm = async (booking) => {
     await updateBookingStatus(
@@ -130,7 +140,7 @@ function Admin() {
   }
 
   const restore = async (booking) => {
-    await updateBookingStatus(booking.id, 'Pending')
+    await updateBookingStatus(booking.id, 'Pending', { undoDelete: true })
     refresh()
   }
 
@@ -150,8 +160,7 @@ function Admin() {
             </a>
           </div>
           <p className="admin-subtitle">
-            {activeBookings.length} active · {archivedBookings.length} archived ·{' '}
-            {pendingCount} pending
+            {activeBookings.length} upcoming · {historyBookings.length} recorded
           </p>
         </div>
       </header>
@@ -225,6 +234,13 @@ function Admin() {
               )
             )}
           </div>
+          <p className="courts-next">
+            {nextBooking
+              ? `Next booking: ${formatHourLabel(
+                  Number(nextBooking.time.split(':')[0])
+                )} · ${nextBooking.name} · ${getReference(nextBooking)}`
+              : 'No more bookings scheduled for this day.'}
+          </p>
         </section>
 
         <div className="admin-tabs">
@@ -235,10 +251,10 @@ function Admin() {
             Active ({activeBookings.length})
           </button>
           <button
-            className={`admin-tab ${tab === 'archive' ? 'active' : ''}`}
-            onClick={() => setTab('archive')}
+            className={`admin-tab ${tab === 'history' ? 'active' : ''}`}
+            onClick={() => setTab('history')}
           >
-            Archive ({archivedBookings.length})
+            History ({historyBookings.length})
           </button>
         </div>
       </div>
@@ -256,7 +272,7 @@ function Admin() {
         ) : tab === 'active' ? (
           activeBookings.length === 0 ? (
             <div className="admin-empty">
-              <p>No active bookings yet. Bookings will appear here once confirmed.</p>
+              <p>No upcoming bookings yet. New reservations will appear here.</p>
             </div>
           ) : (
             <div className="admin-table-wrap">
@@ -322,14 +338,14 @@ function Admin() {
               </table>
             </div>
           )
-        ) : archivedBookings.length === 0 ? (
+        ) : historyBookings.length === 0 ? (
           <div className="admin-empty">
-            <p>No archived bookings yet. Archived or completed bookings appear here.</p>
+            <p>Nothing recorded yet. Past, archived and deleted bookings appear here automatically.</p>
           </div>
         ) : (
           <div className="admin-archive">
             {Array.from(
-              archivedBookings.reduce((groups, booking) => {
+              historyBookings.reduce((groups, booking) => {
                 const day = booking.date
                 if (!groups.has(day)) groups.set(day, [])
                 groups.get(day).push(booking)
@@ -353,6 +369,7 @@ function Admin() {
                         <th>Time</th>
                         <th>Duration</th>
                         <th>Courts</th>
+                        <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -365,19 +382,32 @@ function Admin() {
                           <td>{formatTime(booking.time)}</td>
                           <td>{formatDuration(booking.duration)}</td>
                           <td>{formatCourts(booking.courts)}</td>
+                          <td>
+                            {booking.deletedAt ? (
+                              <span className="status-badge status-deleted">
+                                Deleted
+                              </span>
+                            ) : (
+                              <StatusBadge status={booking.status} />
+                            )}
+                          </td>
                           <td className="table-actions">
-                            <button
-                              className="btn-action btn-restore"
-                              onClick={() => restore(booking)}
-                            >
-                              Restore
-                            </button>
-                            <button
-                              className="btn-action btn-delete"
-                              onClick={() => remove(booking)}
-                            >
-                              Delete
-                            </button>
+                            {(booking.status === 'Archived' || booking.deletedAt) && (
+                              <button
+                                className="btn-action btn-restore"
+                                onClick={() => restore(booking)}
+                              >
+                                Restore
+                              </button>
+                            )}
+                            {!booking.deletedAt && (
+                              <button
+                                className="btn-action btn-delete"
+                                onClick={() => remove(booking)}
+                              >
+                                Delete
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

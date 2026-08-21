@@ -21,6 +21,7 @@ function toApi(row) {
     duration: row.duration_hours,
     courts: row.courts,
     status: row.status,
+    deletedAt: row.deleted_at,
     createdAt: row.created_at,
   }
 }
@@ -100,7 +101,7 @@ router.post('/', async (req, res) => {
 })
 
 router.patch('/:id', async (req, res) => {
-  const { status } = req.body ?? {}
+  const { status, undoDelete } = req.body ?? {}
 
   if (!STATUSES.includes(status)) {
     return res
@@ -108,9 +109,12 @@ router.patch('/:id', async (req, res) => {
       .json({ error: `status must be one of: ${STATUSES.join(', ')}` })
   }
 
+  const payload = { status }
+  if (undoDelete === true) payload.deleted_at = null
+
   const { data, error } = await supabase
     .from('bookings')
-    .update({ status })
+    .update(payload)
     .eq('id', req.params.id)
     .select()
     .single()
@@ -128,7 +132,7 @@ router.patch('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const { data, error } = await supabase
     .from('bookings')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', req.params.id)
     .select()
     .single()

@@ -34,7 +34,12 @@ function coversHour(booking, hour) {
 export function countBooked(bookings, time) {
   const hour = Number(time.split(':')[0])
   return bookings
-    .filter((booking) => booking.status !== 'Archived' && coversHour(booking, hour))
+    .filter(
+      (booking) =>
+        booking.status !== 'Archived' &&
+        !booking.deletedAt &&
+        coversHour(booking, hour)
+    )
     .reduce((sum, booking) => sum + (Number(booking.courts) || 1), 0)
 }
 
@@ -58,6 +63,23 @@ export function formatTimeRange(time, duration) {
   const start = Number(time.split(':')[0])
   const end = (start + (Number(duration) || 1)) % 24
   return `${formatHourLabel(start)} – ${formatHourLabel(end)}`
+}
+
+export function getNextBooking(bookings, date, hour) {
+  const upcoming = bookings
+    .filter(
+      (booking) =>
+        booking.date === date &&
+        booking.status !== 'Archived' &&
+        !booking.deletedAt &&
+        Number(booking.time.split(':')[0]) > hour
+    )
+    .sort(
+      (a, b) =>
+        Number(a.time.split(':')[0]) - Number(b.time.split(':')[0]) ||
+        String(a.createdAt).localeCompare(String(b.createdAt))
+    )
+  return upcoming[0] || null
 }
 
 export function getCourtOccupancy(bookings, date, hour) {
@@ -107,10 +129,10 @@ export async function addBooking({ name, contact, date, time, duration = 1, cour
   })
 }
 
-export async function updateBookingStatus(id, status) {
+export async function updateBookingStatus(id, status, extra = {}) {
   return request(`/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...extra }),
   })
 }
 
