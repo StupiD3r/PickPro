@@ -85,13 +85,15 @@ router.post('/', async (req, res) => {
   })
 
   if (error) {
-    if (error.message.includes('COURT_CAPACITY')) {
+    if ((error.message || '').includes('COURT_CAPACITY')) {
       return res.status(409).json({
         error: 'Not enough courts available for this date and time.',
       })
     }
-    console.error('create_booking failed:', error.message)
-    return res.status(500).json({ error: 'Failed to create booking.' })
+    console.error('create_booking failed:', error)
+    return res
+      .status(500)
+      .json({ error: `Failed to create booking: ${error.message}` })
   }
 
   res.status(201).json(toApi(data))
